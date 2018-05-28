@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Document</title>
+
+	<style>
+		.body {
+			text-align: center;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		h1 {
+			text-align: center;
+		}
+		div {
+			text-align: center;
+		}
+	</style>
+</head>
+
+<body>
+	<h1>DOMINO FACE-ID</h1>
+	<div id="my_camera"></div>
+	<p>
+		<input id="file" type="file">
+	</p>
+	<div>
+		<img id="video">
+	</div>
+	
+	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/webcamjs/1.0.25/webcam.js"></script>
+	<script>
+		function encode(input) {
+			var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+			var output = "";
+			var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+			var i = 0;
+
+			while (i < input.length) {
+				chr1 = input[i++];
+				chr2 = i < input.length ? input[i++] : Number.NaN; // Not sure if the index
+				chr3 = i < input.length ? input[i++] : Number.NaN; // checks are needed here
+
+				enc1 = chr1 >> 2;
+				enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+				enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+				enc4 = chr3 & 63;
+
+				if (isNaN(chr2)) {
+					enc3 = enc4 = 64;
+				} else if (isNaN(chr3)) {
+					enc4 = 64;
+				}
+				output += keyStr.charAt(enc1) + keyStr.charAt(enc2) +
+					keyStr.charAt(enc3) + keyStr.charAt(enc4);
+			}
+			return output;
+		}
+	</script>
+	<script type="text/javascript" charset="utf-8">
+		// Webcam.set({
+		// 	width: 320,
+		// 	height: 240,
+		// 	image_format: 'jpeg',
+		// 	jpeg_quality: 90
+		// });
+		// Webcam.attach('#my_camera');
+		var socket = io.connect('http://' + document.domain + ':' + location.port);
+		// var socket = io.connect('http://localhost:5000');
+		var video = document.querySelector('#video');
+		var file = document.querySelector('#file');
+
+		function take_snapshot() {
+			// Webcam.snap(function (data_uri) {
+			// 	socket.emit('frame', { data: data_uri });
+			// });
+		}
+
+		function getBase64Image(dataURL) {
+			return dataURL.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
+		}
+
+		function file_upload(file) {
+			var reader = new FileReader();
+			reader.readAsDataURL(file);
+			reader.onload = function () {
+				var data = getBase64Image(reader.result);
+				socket.emit('frame', { data: data });
+			};
+			reader.onerror = function (error) {
+				console.log('Error: ', error);
+			};
+		}
+
+
+		file.addEventListener('change', function () {
+			var files = file.files;
+
+			if (files && files.length > 0) {
+				firstFile = files[0];
+				file_upload(firstFile);
+			}
+		})
+
+		socket.on('frame', function (message) {
+			if (message.data) {
+				var uri = message.data;
+				video.src = "data:image/jpg;base64," + uri;
+			}
+		});
+
+		socket.on('connect', function () {
+			setInterval(take_snapshot, 1000 / 24);
+		});
+	</script>
+</body>
+
+</html>
