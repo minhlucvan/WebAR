@@ -1,3 +1,6 @@
 [submodule "face_stream"]
 	path = face_stream
 	url = https://github.com/minhlucvan/real-time-face-recognition-with-facenet.git
+[submodule "face_regc"]
+	path = face_regc
+	url = https://github.com/minhlucvan/real-time-face-recognition-with-facenet.git
