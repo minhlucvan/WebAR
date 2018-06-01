@@ -1,0 +1,1 @@
+ gunicorn --worker-class eventlet -w 1 --certfile cert.pem --keyfile key.pem -b 0.0.0.0:5500 app:app
