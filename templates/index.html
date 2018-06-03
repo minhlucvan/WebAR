@@ -25,7 +25,14 @@
 
 <body>
 	<h1>DOMINO FACE-ID</h1>
-	<div id="my_camera"></div>
+	<div>
+		<div id="my_camera"></div>
+		<div>
+			<input id="add_input_name" />
+			<button id="add_input">Add Face</button>
+			<button id="re_train">Re-Train</button>
+		</div>
+	</div>
 	<p>
 		<input id="file" type="file">
 	</p>
@@ -64,22 +71,29 @@
 		}
 	</script>
 	<script type="text/javascript" charset="utf-8">
-		Webcam.set({
-			width: 320,
-			height: 240,
-			image_format: 'jpeg',
-			jpeg_quality: 90
-		});
-		Webcam.attach('#my_camera');
-		var socket = io.connect('://' + document.domain + ':' + location.port);
-		// var socket = io.connect('http://localhost:5000');
+		var enableWebcam = false;
+
+		if( enableWebcam) {
+			Webcam.set({
+				width: 640,
+				height: 480,
+				image_format: 'jpeg',
+				jpeg_quality: 90
+			});
+			Webcam.attach('#my_camera');
+		}
+		// var socket = io.connect('://' + document.domain + ':' + location.port);
+		var socket = io.connect('http://localhost:5100');
 		var video = document.querySelector('#video');
 		var file = document.querySelector('#file');
+		var nameInput = document.querySelector('#add_input_name');
+		var addBtn = document.querySelector('#add_input');
+		var trainBtn = document.querySelector('#re_train');
 
 		function take_snapshot() {
 			Webcam.snap(function (data_uri) {
 				var data = getBase64Image(data_uri);
-				socket.emit('frame', { data: data });
+				socket.emit('image_frame', { data: data });
 			});
 		}
 
@@ -92,7 +106,7 @@
 			reader.readAsDataURL(file);
 			reader.onload = function () {
 				var data = getBase64Image(reader.result);
-				socket.emit('frame', { data: data });
+				socket.emit('image_frame', { data: data });
 			};
 			reader.onerror = function (error) {
 				console.log('Error: ', error);
@@ -107,9 +121,22 @@
 				firstFile = files[0];
 				file_upload(firstFile);
 			}
-		})
+		});
 
-		socket.on('frame', function (message) {
+		trainBtn.addEventListener('click', function() {
+			socket.emit('re_train');
+		});
+
+		addBtn.addEventListener('click', function() {
+			Webcam.snap(function (data_uri) {
+				var data = getBase64Image(data_uri);
+				var name = nameInput.value || 'other';
+				console.log(name);
+				socket.emit('add_input', { data, name });			
+			});
+		});
+
+		socket.on('image_frame', function (message) {
 			if (message.data) {
 				var uri = message.data;
 				video.src = "data:image/jpg;base64," + uri;
@@ -117,8 +144,9 @@
 		});
 
 		socket.on('connect', function () {
-			setInterval(take_snapshot, 1000 / 0.2);
-			socket.emit('connect');
+			if( enableWebcam ) {
+				setInterval(take_snapshot, 1000 / 2);
+			}
 		});
 	</script>
 </body>
